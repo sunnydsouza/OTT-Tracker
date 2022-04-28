@@ -34,19 +34,44 @@ function restore_options() {
         // }
     });
     //Set listeners
-    //Slack sync
+
     document.getElementById('use_api_endpoint').addEventListener('change', function () {
         if (this.checked) {
             //validate the api endpoint cannot be empty
+            document.getElementById('api_endpoint').setAttribute('required', 'required');
+          
 
+            document.getElementById('options').classList.add("was-validated");
         } else {
             document.getElementById('api_endpoint').value = "";
+            document.getElementById('api_endpoint').removeAttribute('required');
+            document.getElementById('options').classList.remove("was-validated");
+        }
+    });
+
+    document.getElementById('sync_time').addEventListener('change', function () {
+        if (this.value < 1 || this.value !="") {
+            //validate the api endpoint cannot be empty
+            document.getElementById('options').classList.add("was-validated");
+        } else {
+            document.getElementById('options').classList.remove("was-validated");
+        }
+    });
+
+    document.getElementById('monitor_time').addEventListener('change', function () {
+        if (this.value < 1 || this.value !="") {
+            //validate the api endpoint cannot be empty
+            document.getElementById('monitor_time').classList.add("was-validated");
+        } else {
+            document.getElementById('monitor_time').classList.remove("was-validated");
         }
     });
 
     
     
 }
+
+
 restore_options();
 //save settings
 var inputElements = document.getElementsByTagName("input");
