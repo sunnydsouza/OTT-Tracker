@@ -1,23 +1,22 @@
 {
-  "name": "Hours Playing Video",
+  "name": "OTT Tracker",
   "version": "1.0.0",
   "description": "Track how much time spent on chrome, watching video, ott",
   "manifest_version": 3,
   "author": "Sunny Dsouza",
   "action": {
     "default_popup": "popup.html",
-    "default_title": "Hours Playing Video"
+    "default_title": "Track all videos watched over time, grouped by date"
   },
   "background": {
     "service_worker": "js/background.js",
     "type": "module"
   },
-  "host_permissions": ["<all_urls>"],
-  "permissions": ["scripting","tabCapture", "activeTab", "tabs", "storage", "downloads"],
-  "options_ui": {
-    "page": "options.html",
-    "open_in_tab": false
+  "icons": {
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
   },
-
+  "host_permissions": ["<all_urls>"],
+  "permissions": ["scripting","tabCapture", "activeTab", "tabs", "storage", "downloads","unlimitedStorage","notifications"],
   "homepage_url": "https://sunnydsouza.com"
 }
