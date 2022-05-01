@@ -1,6 +1,6 @@
 {
   "name": "OTT Tracker",
-  "version": "1.1.0",
+  "version": "1.0.0",
   "description": "Track how much time spent on chrome, watching video, ott",
   "manifest_version": 3,
   "author": "Sunny Dsouza",
