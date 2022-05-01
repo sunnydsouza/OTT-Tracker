@@ -2,6 +2,8 @@ const dateMap = {};
 const hourMap = {};
 const hourlyWindowMap = {};
 const windowStatsMap = {};
+const defaultSyncApiTime = 900;
+const defaultMonitorTime = 30;
 
 function findAudioTabs() {
   chrome.tabs.query({ audible: !0 }, function (tabs) {
@@ -34,26 +36,6 @@ function findAudioTabs() {
   });
 }
 
-//Get settings from storage
-function getSettings() {
-  return new Promise((resolve, reject) => {
-    chrome.storage.sync.get(
-      {
-        syncTime: 900,
-        monitorTime: 90,
-        useApiEndpoint: false,
-        apiEndpoint: "",
-      },
-      function (items) {
-        settings = JSON.parse(JSON.stringify(items));
-        return resolve(settings);
-      }
-    );
-  });
-}
-
-var settings = getSettings();
-
 const getDate = (date) => {
   if (!(date in dateMap)) dateMap[date] = {};
 
@@ -75,44 +57,60 @@ const getWindowExistingStats = (window) => {
   return windowStatsMap[window];
 };
 
+//Get settings from storage
+function getSettings() {
+  return new Promise((resolve, reject) => {
+    chrome.storage.sync.get(
+      {
+        syncTime: defaultSyncApiTime,
+        monitorTime: defaultMonitorTime,
+        useApiEndpoint: false,
+        apiEndpoint: "",
+      },
+      function (items) {
+        return resolve(JSON.parse(JSON.stringify(items)));
+      }
+    );
+  });
+}
+
 function getCurrentStorageValue() {
-  chrome.storage.sync.get(["hourlyStats"], function (items) {
+  chrome.storage.local.get(["hourlyStats"], function (items) {
     var result = JSON.stringify(items);
-    console.log("Storage results:" + result);
+    // console.log("Storage results:" + result);
   });
 }
 
 function setChromeStorgeValue() {
-  chrome.storage.sync.set({ hourlyStats: dateMap }, function () {
-    console.log("Set Storage Value: 'hourlyStats' is set to \n" + dateMap);
+  chrome.storage.local.set({ hourlyStats: dateMap }, function () {
+    // console.log("Set Storage Value: 'hourlyStats' is set to \n" + dateMap);
   });
 }
 
-setInterval(function () {
-  console.log(settings);
-  findAudioTabs();
-  setChromeStorgeValue();
-  getCurrentStorageValue();
-}, 5000);
-
-// setInterval(function () {
-//     saveToDisk();
-//   }, 10000);
-function saveToDisk() {
-  chrome.storage.local.get(null, function (items) {
-    // null implies all items
-    // Convert object to a string.
-    var result = JSON.stringify(items);
-
-    // Save as file
-    var url = "data:application/json;base64," + btoa(result);
-    chrome.downloads.download({
-      url: url,
-      filename: "filename_of_exported_file.json",
-    });
+/**
+ * Loop and keep polling for the presence of audio tabs
+ */
+var pollAudioTabs = function () {
+  const settings = getSettings().then(function (settings) {
+    console.log("Settings:" + JSON.stringify(settings));
+    findAudioTabs();
+    setChromeStorgeValue();
+    getCurrentStorageValue();
+    let timeout = setTimeout(pollAudioTabs, settings.monitorTime * 1000);
   });
-}
+};
 
+/**
+ * Initial function to start the background polling of audio tabs
+ */
+var initialPollAudioTabs = setTimeout(pollAudioTabs, defaultSyncApiTime);
+
+/**
+ * Helper function to send out post request to api endpoint
+ * @param {string} url
+ * @param {} data
+ * @returns
+ */
 async function postData(url = "", data = {}) {
   // Default options are marked with *
   const response = await fetch(url, {
@@ -131,17 +129,49 @@ async function postData(url = "", data = {}) {
   return response.json(); // parses JSON response into native JavaScript objects
 }
 
-setInterval(function () {
-  console.log(JSON.stringify(dateMap));
+/**
+ * Helper function that checks if sync is enabled and if yes, send a post request to the API endpoint
+ * @param {boolean} useEndpoint
+ * @param {string} endpoint
+ */
+function syncToApi(useEndpoint, endpoint) {
+  // console.log(JSON.stringify(dateMap));
 
-  postData("http://192.168.0.109:1880/answer", {
-    answer: dateMap,
-  }).then((data) => {
-    console.log(data); // JSON data parsed by `data.json()` call
+  if (useEndpoint) {
+    if (endpoint.trim() != "") {
+      postData(endpoint, {
+        tracker: dateMap,
+      }).then((data) => {
+        console.log(data); // JSON data parsed by `data.json()` call
+      });
+    } else {
+      console.log("There is no api endpoint to sync!");
+    }
+  } else {
+    console.log("Sync to API is disabled! Hence nothing to sync!");
+  }
+}
+
+/**
+ * Loop and post data to the API endpoint
+ */
+var pollSyncApi = function () {
+  const settings = getSettings().then(function (settings) {
+    console.log("Settings:" + JSON.stringify(settings));
+    syncToApi(settings.useApiEndpoint, settings.apiEndpoint);
+    let timeout = setTimeout(pollSyncApi, settings.syncTime * 1000);
   });
-}, 900000);
+};
 
-//  #######  Below code is to restrict from the chrome background service worker from going inactive #######
+/**
+ * initial sync to the API endpoint
+ */
+var initialPollSyncApi = setTimeout(pollSyncApi, defaultSyncApiTime);
+
+/**
+ * #######  Below code is to restrict from the chrome background service worker from going inactive #######
+ */
+
 let lifeline;
 
 keepAlive();
