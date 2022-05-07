@@ -1,7 +1,8 @@
-const dateMap = {};
-const windowStatsMap = {};
+let dateMap = {};
+let windowStatsMap = {};
 const defaultSyncApiTime = 900;
 const defaultMonitorTime = 30;
+
 
 /**
  * Find the tabs playing audio and create a map of the tabs and their details
@@ -22,23 +23,26 @@ function findAudioTabs() {
           hour
       );
 
-      if (getWindowExistingStats(windowTitle).length == 0) {
+      // if (!(eventDate in dateMap)) {
+      //   windowStatsMap = {}; //reset the window stats map
+      // }
+
+      if (getWindowExistingStats(eventDate,windowTitle).length == 0) {
         //If there is no window tracking for this window title
-        getWindowExistingStats(windowTitle).push(getNewInterval(eventDateTime));
+        getWindowExistingStats(eventDate,windowTitle).push(getNewInterval(eventDateTime));
       } else if (
-        getWindowExistingStats(windowTitle)[
-          getWindowExistingStats(windowTitle).length - 1
+        getWindowExistingStats(eventDate,windowTitle)[
+          getWindowExistingStats(eventDate,windowTitle).length - 1
         ].end_time != ""
       ) {
         //If there is an existing window tracking for this window title but if the last interval for this window title is closed, create a new interval
-        getWindowExistingStats(windowTitle).push(getNewInterval(eventDateTime));
+        getWindowExistingStats(eventDate,windowTitle).push(getNewInterval(eventDateTime));
       }
 
-      getDate(eventDate)[eventDate] = windowStatsMap;
+      // getDate(eventDate)[eventDate] = windowStatsMap;
+      // dateMap[eventDate] = windowStatsMap;
 
-      console.log(
-        "current value of dateMap is:" + JSON.stringify(getDate2(eventDate))
-      );
+      console.log("current value of dateMap is:" + JSON.stringify(dateMap));
     });
 
     weedNoLongerPlayingTabs(eventDate, tabs);
@@ -50,12 +54,19 @@ const getDate = (date) => {
 
   return dateMap[date];
 };
-const getWindowExistingStats = (window) => {
-  if (!(window in windowStatsMap)) {
-    windowStatsMap[window] = [];
+const getWindowExistingStats = (date,window) => {
+  if (!(window in getDate(date))) {
+    getDate(date)[window] = [];
   }
-  return windowStatsMap[window];
+  return getDate(date)[window];
 };
+
+// const getWindowExistingStats = (window) => {
+//   if (!(window in windowStatsMap)) {
+//     windowStatsMap[window] = [];
+//   }
+//   return windowStatsMap[window];
+// };
 
 /**
  * A new interval is created for each tab that is opened.
@@ -75,9 +86,10 @@ function getNewInterval(eventDateTime) {
  * @returns
  */
 function getAllWindowTitlesForDate(eventDate) {
-  const windowTitles = Object.values(getDate(eventDate)).map((tabs) =>
-    Object.keys(tabs)
-  )[0]; //TODO need to check of a better way to achieve this
+  // const windowTitles = Object.values(getDate(eventDate)).map((tabs) =>
+  //   Object.keys(tabs)
+  // )[0]; //TODO need to check of a better way to achieve this
+  const windowTitles = Object.keys(getDate(eventDate)); 
   return windowTitles;
 }
 
@@ -88,8 +100,20 @@ function getAllWindowTitlesForDate(eventDate) {
  * @returns
  */
 function getWindowMapForDate(eventDate) {
-  const windowMap = Object.values(getDate(eventDate)); //TODO need to check of a better way to achieve this
-  return windowMap;
+  // const windowMap = Object.values(getDate(eventDate)); //TODO need to check of a better way to achieve this
+  const windowMapForDate = getDate(eventDate); //TODO need to check of a better way to achieve this
+  // console.log("revised getWindowMapForDate");
+  let arr = [];
+  //convert the map into a list of map. Basically wrap the entire map in an array
+  Object.entries(windowMapForDate).forEach(([k, v]) => {
+    // console.log("The key: ", k)
+    // console.log("The value: ", v)
+    let temp = {};
+    temp[k] = v;
+    arr.push(temp);
+  });
+  // console.log(arr);
+  return arr;
 }
 
 /**
@@ -102,8 +126,8 @@ function weedNoLongerPlayingTabs(eventDate, currentActiveTabs) {
   const currentActiveTabsTitles = currentActiveTabs.map((tab) => tab.title);
 
   // Check the difference between the current active tabs and the window titles for the current date
-  console.log(getAllWindowTitlesForDate(eventDate));
-  if (getAllWindowTitlesForDate(eventDate)!=undefined) {
+  // console.log(getAllWindowTitlesForDate(eventDate));
+  if (getAllWindowTitlesForDate(eventDate) != undefined) {
     let noLongerPlayingTabs = getAllWindowTitlesForDate(eventDate).filter(
       (x) =>
         !currentActiveTabsTitles.includes(x) &&
@@ -115,7 +139,7 @@ function weedNoLongerPlayingTabs(eventDate, currentActiveTabs) {
     console.log(noLongerPlayingTabs);
 
     //Close the window stats for any that are no longer active
-    closeWindowIntervalForExistingTabs(noLongerPlayingTabs);
+    closeWindowIntervalForExistingTabs(eventDate,noLongerPlayingTabs);
   } else {
     console.log("No window titles for this date. Nothing to weed out");
   }
@@ -127,11 +151,11 @@ function weedNoLongerPlayingTabs(eventDate, currentActiveTabs) {
  * this will put the latest timestamp for the end_time for the window.(the interval is now closed!)
  * @param {Array<String>} noLongerPlayingTabs
  */
-function closeWindowIntervalForExistingTabs(noLongerPlayingTabs) {
+function closeWindowIntervalForExistingTabs(eventDate,noLongerPlayingTabs) {
   noLongerPlayingTabs.forEach((tabTitle) => {
     console.log("Closing window stats for tab:" + tabTitle);
-    getWindowExistingStats(tabTitle)[
-      getWindowExistingStats(tabTitle).length - 1
+    getWindowExistingStats(eventDate,tabTitle)[
+      getWindowExistingStats(eventDate,tabTitle).length - 1
     ].end_time = new Date().toLocaleString();
   });
 }
@@ -146,8 +170,11 @@ function closeWindowIntervalForExistingTabs(noLongerPlayingTabs) {
 function hasAnActiveWindowTracking(eventDate, windowTitle) {
   return (
     getWindowMapForDate(eventDate).filter((windowMap) => {
+      let windowMapEntries = [...Object.values(windowMap)][0];
       if (
-        windowMap[windowTitle][windowMap[windowTitle].length - 1].end_time == ""
+        // windowMap[windowTitle][windowMap[windowTitle].length - 1].end_time == ""
+        windowTitle in windowMap &&
+        windowMapEntries[windowMapEntries.length - 1].end_time == ""
       ) {
         console.log(
           "there is an active window session for this window title:" +
@@ -177,14 +204,14 @@ function getSettings() {
 }
 
 function getCurrentStorageValue() {
-  chrome.storage.local.get(["hourlyStats"], function (items) {
+  chrome.storage.local.get(["tracker"], function (items) {
     var result = JSON.stringify(items);
     // console.log("Storage results:" + result);
   });
 }
 
 function setChromeStorgeValue() {
-  chrome.storage.local.set({ hourlyStats: dateMap }, function () {
+  chrome.storage.local.set({ tracker: dateMap }, function () {
     // console.log("Set Storage Value: 'hourlyStats' is set to \n" + dateMap);
   });
 }
@@ -201,6 +228,15 @@ var pollAudioTabs = function () {
     let timeout = setTimeout(pollAudioTabs, settings.monitorTime * 1000);
   });
 };
+
+chrome.webNavigation.onHistoryStateUpdated.addListener((details) => {
+  console.log('wake me up');
+});
+
+// chrome.alarms.create({ periodInMinutes: 4.9 })
+// chrome.alarms.onAlarm.addListener(() => {
+//   console.log('log for debug')
+// });
 
 /**
  * Initial function to start the background polling of audio tabs

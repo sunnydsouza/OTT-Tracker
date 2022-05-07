@@ -23,7 +23,8 @@
   "host_permissions": ["<all_urls>"],
   "permissions": [
     "scripting",
-    "tabCapture",
+    "webRequest",
+    "webNavigation",
     "activeTab",
     "tabs",
     "storage",
