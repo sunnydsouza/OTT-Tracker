@@ -3,12 +3,11 @@ let windowStatsMap = {};
 const defaultSyncApiTime = 900;
 const defaultMonitorTime = 30;
 
-
 /**
  * Find the tabs playing audio and create a map of the tabs and their details
  */
 function findAudioTabs() {
-  let eventDateTime = new Date().toLocaleString();
+  let eventDateTime = new Date().toISOString();
   const eventDate = eventDateTime.substring(0, 10);
   const hour = eventDateTime.substring(12, 14);
   chrome.tabs.query({ audible: !0 }, function (tabs) {
@@ -27,16 +26,20 @@ function findAudioTabs() {
       //   windowStatsMap = {}; //reset the window stats map
       // }
 
-      if (getWindowExistingStats(eventDate,windowTitle).length == 0) {
+      if (getWindowExistingStats(eventDate, windowTitle).length == 0) {
         //If there is no window tracking for this window title
-        getWindowExistingStats(eventDate,windowTitle).push(getNewInterval(eventDateTime));
+        getWindowExistingStats(eventDate, windowTitle).push(
+          getNewInterval(eventDateTime)
+        );
       } else if (
-        getWindowExistingStats(eventDate,windowTitle)[
-          getWindowExistingStats(eventDate,windowTitle).length - 1
+        getWindowExistingStats(eventDate, windowTitle)[
+          getWindowExistingStats(eventDate, windowTitle).length - 1
         ].end_time != ""
       ) {
         //If there is an existing window tracking for this window title but if the last interval for this window title is closed, create a new interval
-        getWindowExistingStats(eventDate,windowTitle).push(getNewInterval(eventDateTime));
+        getWindowExistingStats(eventDate, windowTitle).push(
+          getNewInterval(eventDateTime)
+        );
       }
 
       // getDate(eventDate)[eventDate] = windowStatsMap;
@@ -54,7 +57,7 @@ const getDate = (date) => {
 
   return dateMap[date];
 };
-const getWindowExistingStats = (date,window) => {
+const getWindowExistingStats = (date, window) => {
   if (!(window in getDate(date))) {
     getDate(date)[window] = [];
   }
@@ -75,8 +78,13 @@ const getWindowExistingStats = (date,window) => {
  */
 function getNewInterval(eventDateTime) {
   const intervalMap = {};
-  intervalMap["start_time"] = eventDateTime;
+  intervalMap["start_time"] = new Date(
+    new Date(eventDateTime).getTime() -
+      new Date(eventDateTime).getTimezoneOffset() * 60000
+  ).toISOString();
   intervalMap["end_time"] = "";
+  intervalMap["duration"] = 0;
+  intervalMap["id"] = "";
   return intervalMap;
 }
 
@@ -89,7 +97,7 @@ function getAllWindowTitlesForDate(eventDate) {
   // const windowTitles = Object.values(getDate(eventDate)).map((tabs) =>
   //   Object.keys(tabs)
   // )[0]; //TODO need to check of a better way to achieve this
-  const windowTitles = Object.keys(getDate(eventDate)); 
+  const windowTitles = Object.keys(getDate(eventDate));
   return windowTitles;
 }
 
@@ -117,6 +125,19 @@ function getWindowMapForDate(eventDate) {
 }
 
 /**
+ * Generate a random UUID
+ * @returns UUID
+ */
+const uuid4 = () => {
+  const ho = (n, p) => n.toString(16).padStart(p, 0); /// Return the hexadecimal text representation of number `n`, padded with zeroes to be of length `p`
+  const data = crypto.getRandomValues(new Uint8Array(16)); /// Fill the buffer with random data
+  data[6] = (data[6] & 0xf) | 0x40; /// Patch the 6th byte to reflect a version 4 UUID
+  data[8] = (data[8] & 0x3f) | 0x80; /// Patch the 8th byte to reflect a variant 1 UUID (version 4 UUIDs are)
+  const view = new DataView(data.buffer); /// Create a view backed by a 16-byte buffer
+  return `${ho(view.getUint32(0), 8)}-${ho(view.getUint16(4), 4)}-${ho(view.getUint16(6), 4)}-${ho(view.getUint16(8), 4)}-${ho(view.getUint32(10), 8)}${ho(view.getUint16(14), 4)}`; /// Compile the canonical textual form from the array data
+};
+
+/**
  * Compares all the window titles for the current date and closes the window stats for any that are no longer active.
  * @param {String} eventDate The date the event occured. Ideally the current date/time
  * @param {tabs} currentActiveTabs The tabs that are currently active, passed from the callback from chrome.tabs.query
@@ -139,7 +160,7 @@ function weedNoLongerPlayingTabs(eventDate, currentActiveTabs) {
     console.log(noLongerPlayingTabs);
 
     //Close the window stats for any that are no longer active
-    closeWindowIntervalForExistingTabs(eventDate,noLongerPlayingTabs);
+    closeWindowIntervalForExistingTabs(eventDate, noLongerPlayingTabs);
   } else {
     console.log("No window titles for this date. Nothing to weed out");
   }
@@ -151,13 +172,38 @@ function weedNoLongerPlayingTabs(eventDate, currentActiveTabs) {
  * this will put the latest timestamp for the end_time for the window.(the interval is now closed!)
  * @param {Array<String>} noLongerPlayingTabs
  */
-function closeWindowIntervalForExistingTabs(eventDate,noLongerPlayingTabs) {
+function closeWindowIntervalForExistingTabs(eventDate, noLongerPlayingTabs) {
   noLongerPlayingTabs.forEach((tabTitle) => {
     console.log("Closing window stats for tab:" + tabTitle);
-    getWindowExistingStats(eventDate,tabTitle)[
-      getWindowExistingStats(eventDate,tabTitle).length - 1
-    ].end_time = new Date().toLocaleString();
+
+    //Get the last interval for the window
+    const lastInterval = getWindowExistingStats(eventDate, tabTitle)[
+      getWindowExistingStats(eventDate, tabTitle).length - 1
+    ];
+    // log end time in 2022-05-22T09:31:00+05:30 format in +5:30 format
+    lastInterval.end_time = new Date(
+      new Date().getTime() -
+        new Date().getTimezoneOffset() * 60000
+    ).toISOString();
+    //Calculate a digest over the start and end time and duration
+    lastInterval.id=uuid4();
+
+    //Calculate duration between start_time and end_time
+    lastInterval.duration = calculateDuration(
+      lastInterval.start_time,
+      lastInterval.end_time
+    );
   });
+}
+
+//Calculate the duration between two ISO string dates in minutes
+function calculateDuration(startTime, endTime) {
+  const startTimeDate = new Date(startTime);
+  const endTimeDate = new Date(endTime);
+  const diff = endTimeDate.getTime() - startTimeDate.getTime();
+  const diffInMinutes = Math.round(diff / 60000);
+  console.log("diffInMinutes:" + diffInMinutes);
+  return diffInMinutes;
 }
 
 /**
@@ -230,7 +276,7 @@ var pollAudioTabs = function () {
 };
 
 chrome.webNavigation.onHistoryStateUpdated.addListener((details) => {
-  console.log('wake me up');
+  console.log("wake me up");
 });
 
 // chrome.alarms.create({ periodInMinutes: 4.9 })

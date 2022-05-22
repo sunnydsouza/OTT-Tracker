@@ -88,10 +88,10 @@ for (i = 0; i < inputElements.length; i++) {
 
 //Ability to download json
 function saveToDisk() {
-  chrome.storage.local.get(["hourlyStats"], function (items) {
+  chrome.storage.local.get(["tracker"], function (items) {
     // null implies all items
     // Convert object to a string.
-    let result = JSON.stringify(items);
+    let result = JSON.stringify(items,null, 4); // Indented 4 spaces
     let eventDateTime = new Date()
       .toLocaleString()
       .substring(0, 10)

@@ -36,34 +36,14 @@
           >
           <div class="col-sm-2">
             <input
-              placeholder="60"
+              placeholder="30"
               id="monitor_time"
               type="number"
               class="form-control form-control-sm"
               required
             />
           </div>
-          <div class="invalid-tooltip">
-            Monitoring interval cannot be empty
-          </div>
-        </div>
-
-        <div class="form-group row">
-          <label for="sync_time" class="col-sm-4 col-form-label text-right"
-            >Sync every (secs)</label
-          >
-          <div class="col-sm-2">
-            <input
-              placeholder="90"
-              id="sync_time"
-              type="number"
-              class="form-control form-control-sm"
-              required
-            />
-          </div>
-          <div class="invalid-tooltip">
-            Sync interval cannot be empty
-          </div>
+          <div class="invalid-tooltip">Monitoring interval cannot be empty</div>
         </div>
 
         <div class="form-group row">
@@ -79,6 +59,22 @@
         </div>
 
         <div class="form-group row">
+          <label for="sync_time" class="col-sm-4 col-form-label text-right"
+            >Sync every (secs)</label
+          >
+          <div class="col-sm-2">
+            <input
+              placeholder="900"
+              id="sync_time"
+              type="number"
+              class="form-control form-control-sm"
+              required
+            />
+          </div>
+          <div class="invalid-tooltip">Sync interval cannot be empty</div>
+        </div>
+
+        <div class="form-group row">
           <label for="api_endpoint" class="col-sm-4 text-right"
             >Sync to endpoint:</label
           >
@@ -90,9 +86,7 @@
               class="form-control form-control-sm"
             />
           </div>
-          <div class="invalid-tooltip">
-            Api endpoint cannot be empty
-          </div>
+          <div class="invalid-tooltip">Api endpoint cannot be empty</div>
         </div>
 
         <div class="form-group row">

@@ -1,5 +1,5 @@
 # OTT Tracker
-A Chrome extension to monitor ANY video/audio playing tabs and track the amount of time spent. Groups by hours and captures the title of the video played and the time spent.
+A Chrome extension that auto tracks all videos titles played on Netflix, PrimeVideo, SonyLiv, YouTube, Hotstar, Disney+ or ANY video/audio playing tabs grouped by date, title and the time interval spent.
 
 # Tools used #
 * HTML, CSS and JavaScript
